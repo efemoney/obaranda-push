@@ -1,7 +1,7 @@
 {
   "name": "obaranda-rss-push",
   "version": "1.0.0",
-  "description": "A web api to subscribe for and disemminate push messages from www.obaranda.com via superfeedr.com. The app resides at http://obaranda-rss-push.herokuapp.com",
+  "description": "A web api to subscribe for and disemminate push messages from www.obaranda.com via superfeedr.com. The app resides at http://obaranda-push.herokuapp.com",
   "dependencies": {
     "body-parser": "^1.15.2",
     "dotenv": "^2.0.0",
@@ -17,5 +17,5 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Efeturi Money",
-  "license": "ISC"
+  "license": "MIT"
 }

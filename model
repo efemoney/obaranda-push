@@ -1,0 +1,77 @@
+var Const = require("./constants.js");
+
+var firebase = require("firebase").initializeApp(getFirebaseConfig());
+
+
+module.exports.setPendingStatus = function (topic, value) {
+
+  var key = keyFor(topic);
+  var topicPendingStatusRef = firebase.database().ref('subscriptions/pending/' + key);
+
+  topicPendingStatusRef.set(value);
+
+};
+
+module.exports.getPendingStatus = function (topic, callback) {
+
+  if (!topic || !callback) return;
+
+  var key = keyFor(topic);
+  var topicPendingStatusRef = firebase.database().ref('subscriptions/pending/' + key);
+
+  topicPendingStatusRef.once('value', function (snapshot) {
+
+    var hasPending = !snapshot || !snapshot.val();
+
+    callback(hasPending);
+
+  });
+
+};
+
+module.exports.setSubscribedStatus = function (topic, value) {
+
+  var key = keyFor(topic);
+  var topicSubscriptionStatusRef = firebase.database().ref('subscriptions/subscribed/' + key);
+
+  topicSubscriptionStatusRef.set(value);
+
+};
+
+module.exports.getSubscribedStatus = function (topic, callback) {
+
+  if (!topic || !callback) return;
+
+  var key = keyFor(topic);
+  var topicSubscriptionStatusRef = firebase.database().ref('subscriptions/subscribed/' + key);
+
+  topicSubscriptionStatusRef.once('value', function (snapshot) {
+
+    var isSubscribed = !snapshot || !snapshot.val();
+
+    callback(isSubscribed);
+
+  });
+};
+
+function keyFor(topic) {
+
+  // In the future this might just be a stripping function
+  // that removes any illegal characters from the topicUrl
+  switch (topic) {
+
+    case  Const.SUBCRIBE_TOPIC: return 'obaranda';
+
+    default: return 'anything';
+  }
+
+}
+
+function getFirebaseConfig() {
+  return {
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    databaseURL: process.env.FIREBASE_DB_URL,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+  }
+}

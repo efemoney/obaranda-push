@@ -1,0 +1,28 @@
+{
+  "name": "obaranda-rss-push",
+  "version": "1.0.0",
+  "description": "A web api to poll RSS at www obaranda.com and disemminate push messages to connected a client Android app. The app resides at http://obaranda-push.herokuapp.com",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "dotenv": "^4.0.0",
+    "errors": "^0.3.0",
+    "express": "^4.16.2",
+    "fast-html-parser": "^1.0.1",
+    "feedme": "^1.1.0",
+    "firebase": "^4.6.1",
+    "firebase-admin": "^5.4.3",
+    "moment": "^2.19.1",
+    "oboe": "^2.1.4",
+    "request": "^2.83.0"
+  },
+  "engines": {
+    "node": "8.4.0",
+    "npm": "5.4.1"
+  },
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Efeturi Money",
+  "license": "MIT"
+}

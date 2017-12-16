@@ -43,17 +43,18 @@ function logError(error) {
 }
 
 
-exports.newComicNotification = functions.database.ref('/comics/{uid}').onWrite(event => {
+exports.onNewComic = functions.firestore.doc('comics/{uid}').onWrite(event => {
 
   logEvent(event);
 
   let uid = event.params.uid;
   let comic = event.data.current.val();
+  let previous = event.data.previous.val();
 
   /* See https://firebase.google.com/docs/reference/admin/node/admin.messaging.NotificationMessagePayload */
   let payload = {
     notification: {
-      title: `${event.data.previous.val() ? 'Updated' : 'New'} comic on OBARANDA!`,
+      title: `${ previous ? 'Updated' : 'New'} comic on OBARANDA!`,
       body: `${comic.title} was uploaded by ${comic.author.name}`,
     },
     data: {
@@ -77,7 +78,7 @@ exports.newComicNotification = functions.database.ref('/comics/{uid}').onWrite(e
 
 });
 
-exports.newDeviceNotification = functions.database.ref('/user-devices/{uid}').onWrite(event => {
+exports.onNewDeviceToken = functions.firestore.doc('tokens/{uid}').onWrite(event => {
 
   logEvent(event);
 
@@ -112,13 +113,5 @@ exports.newDeviceNotification = functions.database.ref('/user-devices/{uid}').on
 
     })
   ;
-
-});
-
-exports.imageMetaDataRetriever = functions.database.ref('/comics/{uid}/images').onWrite(event => {
-
-  logEvent(event);
-
-
 
 });

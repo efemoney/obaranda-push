@@ -6,12 +6,10 @@ module.exports = {
 
     let uid = req.body.uid;
     let token = req.body.token;
-    let brand = req.body.deviceBrand;
-    let model = req.body.deviceModel;
 
     // todo validate
 
-    usersModel.putDeviceToken(uid, token, brand, model)
+    usersModel.putDeviceToken(uid, token)
       .then(() => res.sendStatus(200).json())
       .catch(err => next(err))
     ;
@@ -25,9 +23,11 @@ module.exports = {
 
     // todo validate
 
-    usersModel.putCurrentPage(uid, page);
+    usersModel.putCurrentPage(uid, page)
+      .then(() => res.sendStatus(200).json())
+      .catch(err => next(err))
+    ;
 
-    res.sendStatus(200).send();
   }
 
 };

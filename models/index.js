@@ -6,23 +6,16 @@ admin.initializeApp(getFirebaseAdminConfig());
 
 const users = {
 
-  putDeviceToken: (uid, token, brand, model) => {
+  putDeviceToken: (uid, token) => admin.firestore()
+    .collection('tokens')
+    .doc(uid)
+    .set({token: token})
+  ,
 
-    let tokensRef = admin.database().ref("user-tokens");
-    let deviceRef = admin.database().ref("user-devices");
-
-    return Promise.all([
-
-      tokensRef.child(uid).set(token),
-      deviceRef.child(uid).set({brand: brand, model: model}),
-
-    ]);
-
-  },
-
-  putCurrentPage: (uid, page) => admin.database().ref('user-pages')
-    .child(uid)
-    .set(page)
+  putCurrentPage: (uid, page) => admin.firestore()
+    .collection('current-page')
+    .doc(uid)
+    .set({page: page})
   ,
 
 };
@@ -33,10 +26,7 @@ const comics = {
    * @param comics {Array}
    * @returns {Promise}
    */
-  addAll: comics => Promise.all(comics.map(comic => admin.firestore()
-    .collection("comics")
-    .add(comic)
-  )),
+  addAll: comics => Promise.all(comics.map(comic => admin.firestore().collection("comics").add(comic))),
 
   getLatest: () => admin.firestore()
     .collection('comics')
@@ -63,16 +53,16 @@ const comics = {
 const settings = {
 
   getLastPolledSuccessfullyTime: () => admin.firestore()
-    .collection('settings')
-    .doc('poll-times')
+    .collection('internal')
+    .doc('settings')
     .get()
-    .then(doc => doc.exists ? (doc.get('latest') || 0) : 0)
+    .then(doc => doc.exists ? (doc.get('last-poll') || 0) : 0)
   ,
 
   setLastPolledSuccessfullyTime: time => admin.firestore()
-    .collection('settings')
-    .doc('poll-times')
-    .set({latest: time})
+    .collection('internal')
+    .doc('settings')
+    .set({'last-poll': time}, {merge: true})
   ,
 
 };

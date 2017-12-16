@@ -5,17 +5,20 @@ const port = process.env.PORT || 8080; // Heroku sets a PORT env variable
 const dotenv = require('dotenv');
 if (isDevelopment) dotenv.load(); // Load environment variables if necessary
 
-const bodyParser = require('body-parser');
 const express = require('express');
+const bodyParser = require('body-parser');
+const compression = require('compression');
 
 const app = express();
+
+app.use(compression());
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 
 app.all('/*', (req, res, next) => { // cors
 
-  res.header("Access-Control-Allow-Origin", "*");
+  res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-type,Accept,X-Access-Token,X-Key');
 

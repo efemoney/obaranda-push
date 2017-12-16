@@ -4,6 +4,7 @@
   "description": "A web api to poll RSS at www obaranda.com and disemminate push messages to connected a client Android app. The app resides at http://obaranda-push.herokuapp.com",
   "dependencies": {
     "body-parser": "^1.18.2",
+    "compression": "^1.7.1",
     "dotenv": "^4.0.0",
     "errors": "^0.3.0",
     "express": "^4.16.2",

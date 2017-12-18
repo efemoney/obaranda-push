@@ -1,9 +1,9 @@
 /* Yes. Pollis is a reference to a place in the series, The 100 (watch it!) */
 
+const probe = require('probe-image-size');
+const Vibrant = require('node-vibrant');
+
 const errors = require('../errors');
-
-const Const = require('../constants');
-
 const model = require('../models');
 const comicModel = model.comics;
 const settingsModel = model.settings;
@@ -47,10 +47,39 @@ const saveItems = function (items) {
     })
   );
 
-  // let comics = parseItems(items.reverse());
+  // update images of every comic
+  let updateImages = comics
+    .map(comic => comic.images)
+    .map(images => images.map((image, index) => {
 
-  return comicModel
-    .addAll(comics)
+      let palette = Vibrant.from(image.url)
+        .getPalette()
+        .then(palette => ({
+          muted: palette.Muted ? palette.Muted.getHex() : null,
+          vibrant: palette.Vibrant ? palette.Vibrant.getHex() : null
+        }))
+      ;
+
+      let size = probe(image.url)
+        .then(res => ({
+          width: res.width,
+          height: res.height
+        }));
+
+      return Promise.all([palette, size]).then(arr => {
+
+        images[index]['palette'] = arr[0];
+        images[index]['size'] = arr[1];
+
+        return Promise.resolve();
+
+      });
+
+    }))
+  ;
+
+  return updateImages
+    .then(() => comicModel.addAll(comics))
     .catch(e => logError(e))
 };
 
@@ -78,8 +107,8 @@ router.post('/', (req, res, next) => {
       const newItems = [];
       const lastPolledTime = moment(time);
 
-      oboe(Const.FEED_URL)
-        .node('!.items.*', function(item) {
+      oboe(process.env.OBARANDA_FEED_URL)
+        .node('!.items.*', function (item) {
 
           let pubdate = moment(item.date_published);
 

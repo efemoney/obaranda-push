@@ -33,19 +33,25 @@ const comics = {
     .orderBy('page', 'desc').limit(1)
     .get()
     .then(snapshot => snapshot.docs)
-    .then(docs => docs.length !== 1 ? Promise.reject(new errors.ComicNotFoundError()) : docs[0].data())
+    .then(docs => docs.length !== 1
+      ? Promise.reject(new errors.ComicNotFoundError())
+      : docs[0].data()
+    )
   ,
 
   /**
    * @param page {int}
-   * @return {Promise<DocumentSnapshot[]>}
+   * @return {Promise<DocumentData>}
    */
   getByPage: page => admin.firestore()
     .collection('comics')
     .where('page', '==', page)
     .get()
     .then(snapshot => snapshot.docs)
-    .then(docs => docs.length !== 1 ? Promise.reject(new errors.ComicNotFoundError()) : docs[0].data())
+    .then(docs => docs.length !== 1
+      ? Promise.reject(new errors.ComicNotFoundError())
+      : docs[0].data()
+    )
   ,
 
 };
@@ -56,7 +62,10 @@ const settings = {
     .collection('internal')
     .doc('settings')
     .get()
-    .then(doc => doc.exists ? (doc.get('last-poll') || 0) : 0)
+    .then(doc => doc.exists
+      ? (doc.get('last-poll') || 0)
+      : 0
+    )
   ,
 
   setLastPolledSuccessfullyTime: time => admin.firestore()

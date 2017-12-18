@@ -34,7 +34,7 @@ const saveItems = function (items) {
   if (items.length < 1) return Promise.resolve();
 
   // items were read in reverse chronological order (latest first), correct by reversing
-  let comics = items.reverse().map(item =>
+  const comics = items.reverse().map(item =>
     ({ // comic
       url: item.url,
       page: item.page,
@@ -48,9 +48,9 @@ const saveItems = function (items) {
   );
 
   // update images of every comic
-  let updateImages = Promise.all(comics
+  const updateImages = Promise.all(comics
     .map(comic => comic.images)
-    .map(images => images.map((image, index) => {
+    .map(images => Promise.all(images.map((image, index) => {
 
       let palette = Vibrant.from(image.url)
         .getPalette()
@@ -64,7 +64,8 @@ const saveItems = function (items) {
         .then(res => ({
           width: res.width,
           height: res.height
-        }));
+        }))
+      ;
 
       return Promise.all([palette, size]).then(arr => {
 
@@ -75,7 +76,7 @@ const saveItems = function (items) {
 
       });
 
-    })))
+    }))))
   ;
 
   return updateImages

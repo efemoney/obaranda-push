@@ -48,7 +48,7 @@ const saveItems = function (items) {
   );
 
   // update images of every comic
-  let updateImages = comics
+  let updateImages = Promise.all(comics
     .map(comic => comic.images)
     .map(images => images.map((image, index) => {
 
@@ -75,7 +75,7 @@ const saveItems = function (items) {
 
       });
 
-    }))
+    })))
   ;
 
   return updateImages

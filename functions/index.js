@@ -1,14 +1,12 @@
-
 const admin = require('firebase-admin');
 const functions = require('firebase-functions');
 
 admin.initializeApp(functions.config().firebase);
 
-
 /**
- * @param array {Array}
+ * @param array {[]}
  * @param size {int}
- * @returns {Array<Array<int>>}
+ * @returns {string[][]}
  */
 function chunkArray(array, size) {
 
@@ -43,75 +41,81 @@ function logError(error) {
 }
 
 
-exports.onNewComic = functions.firestore.doc('comics/{uid}').onWrite(event => {
+exports.onNewComic = functions.firestore
+  .document('comics/{id}')
+  .onCreate(event => {
 
-  logEvent(event);
+    logEvent(event);
 
-  let uid = event.params.uid;
-  let comic = event.data.current.val();
-  let previous = event.data.previous.val();
+    let comic = event.data.data();
 
-  /* See https://firebase.google.com/docs/reference/admin/node/admin.messaging.NotificationMessagePayload */
-  let payload = {
-    notification: {
-      title: `${ previous ? 'Updated' : 'New'} comic on OBARANDA!`,
-      body: `${comic.title} was uploaded by ${comic.author.name}`,
-    },
-    data: {
-      url: comic.url,
-      page: comic.page,
-      pubDate: comic.pubDate,
-      title: comic.title,
-    }
-  };
+    /* See https://firebase.google.com/docs/reference/admin/node/admin.messaging.NotificationMessagePayload */
+    let payload = {
+      notification: {
+        title: 'New comic on OBARANDA!',
+        body: `${comic.title} was uploaded by ${comic.author.name}`,
+      },
+      data: {
+        url: comic.url,
+        page: comic.page,
+        pubDate: comic.pubDate,
+        title: comic.title,
+      }
+    };
 
-  return admin.database().ref('user-tokens').once('value')
-    .then(snapshot => snapshot.val())
-    .then(tokens => chunkArray(tokens, 1000))
-    .then(chunks => Promise.all(chunks.map(chunk => admin.messaging().sendToDevice(chunk, payload))))
-    .then(results => results.forEach((res, pos) => {
+    return admin.firestore()
+      .collection('tokens')
+      .get()
+      .then(query => query.docs)
+      .then(docs => docs.map((doc) => doc.get('token')))
+      .then(tokens => chunkArray(tokens, 1000))
+      .then(chunks => Promise.all(chunks.map(chunk => admin.messaging().sendToDevice(chunk, payload))))
+      .then(results => results.forEach((res, pos) => {
 
-      console.log(`Batch ${pos + 1} notifications sent. Failure Count: ${res.failureCount}`);
+        console.log(`Batch ${pos + 1} notifications sent. Failure Count: ${res.failureCount}`);
 
-    }))
-    .catch(err => logError(err));
+      }))
+      .catch(err => logError(err));
 
-});
+  })
+;
 
-exports.onNewDeviceToken = functions.firestore.doc('tokens/{uid}').onWrite(event => {
+exports.onNewDeviceToken = functions.firestore
+  .document('tokens/{uid}')
+  .onWrite(event => {
 
-  logEvent(event);
+    logEvent(event);
 
-  let uid = event.params.uid;
+    let uid = event.params.uid;
 
-  let oldDeviceData = event.data.previous.val();
-  let newDeviceData = event.data.current.val();
+    let token = event.data.get('token');
+    let oldToken = event.data.previous ? event.data.previous.token : '';
 
-  if (!oldDeviceData
-    || oldDeviceData.brand !== newDeviceData.brand
-    || oldDeviceData.model !== newDeviceData.model) return;
+    if (oldToken === token) return;
 
-  admin.database().ref('user-tokens')
-    .child(uid)
-    .once('value')
-    .then(snapshot => snapshot.val())
-    .then(token => {
+    admin.firestore()
+      .collection('tokens')
+      .doc(uid)
+      .get()
+      .then(doc => doc.get('token'))
+      .then(token => {
 
-      if (!token) return Promise.reject('No device token');
+        if (!token) return Promise.reject('No device token');
 
-      /* See https://firebase.google.com/docs/reference/admin/node/admin.messaging.NotificationMessagePayload */
-      let payload = {
-        notification: {
-          title: `Device change`,
-          body: `You just logged into your ${newDeviceData.brand} ${newDeviceData.model} device`,
+        /* See https://firebase.google.com/docs/reference/admin/node/admin.messaging.NotificationMessagePayload */
+        let payload = {
+          notification: {
+            tag: 'new-device',
 
-          tag: 'new-device'
-        }
-      };
+            title: `Device change`,
+            body: `You just logged into your ${newDeviceData.brand} ${newDeviceData.model} device`
+          }
+        };
 
-      return admin.messaging().sendToDevice(token, payload)
+        return admin.messaging().sendToDevice(token, payload)
 
-    })
-  ;
+      })
+    ;
 
-});
+  })
+;

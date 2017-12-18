@@ -8,17 +8,17 @@
     "dotenv": "^4.0.0",
     "errors": "^0.3.0",
     "express": "^4.16.2",
-    "fast-html-parser": "^1.0.1",
-    "feedme": "^1.1.0",
-    "firebase": "^4.6.1",
-    "firebase-admin": "^5.4.3",
-    "moment": "^2.19.1",
+    "firebase": "^4.8.0",
+    "firebase-admin": "^5.5.1",
+    "moment": "^2.20.0",
+    "node-vibrant": "^3.0.0",
     "oboe": "^2.1.4",
+    "probe-image-size": "^3.2.0",
     "request": "^2.83.0"
   },
   "engines": {
-    "node": "8.4.0",
-    "npm": "5.4.1"
+    "node": "9.3.0",
+    "npm": "5.6.0"
   },
   "main": "server.js",
   "scripts": {

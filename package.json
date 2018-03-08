@@ -1,29 +1,43 @@
 {
-  "name": "obaranda-rss-push",
+  "name": "obaranda-push",
   "version": "1.0.0",
-  "description": "A web api to poll RSS at www obaranda.com and disemminate push messages to connected a client Android app. The app resides at http://obaranda-push.herokuapp.com",
+  "description": "A web api to poll RSS at www obaranda.com and disemminate push messages to connected client Android apps. Resides at http://obaranda-push.herokuapp.com",
   "dependencies": {
-    "body-parser": "^1.18.2",
-    "compression": "^1.7.1",
-    "dotenv": "^4.0.0",
-    "errors": "^0.3.0",
+    "compression": "1.7.2",
+    "cors": "^2.8.4",
+    "dotenv": "^5.0.0",
     "express": "^4.16.2",
-    "firebase": "^4.8.0",
-    "firebase-admin": "^5.5.1",
-    "moment": "^2.20.0",
+    "firebase-admin": "^5.9.1",
+    "moment": "^2.20.1",
     "node-vibrant": "^3.0.0",
     "oboe": "^2.1.4",
     "probe-image-size": "^3.2.0",
-    "request": "^2.83.0"
+    "request": "^2.83.0",
+    "rxjs": "^5.5.6"
+  },
+  "devDependencies": {
+    "@google-cloud/firestore": "^0.12.0",
+    "@types/compression": "^0.0.35",
+    "@types/cors": "^2.8.3",
+    "@types/dotenv": "^4.0.2",
+    "@types/express": "^4.11.1",
+    "@types/oboe": "^2.0.28",
+    "@types/request": "^2.47.0",
+    "typescript": "^2.7.2"
   },
   "engines": {
-    "node": "9.3.0",
-    "npm": "5.6.0"
+    "node": "9.6.1"
   },
-  "main": "server.js",
+  "main": "./lib/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "./node_modules/.bin/tsc",
+    "logs": "firebase functions:log",
+    "deploy": "firebase deploy --only functions",
+    "serve": "npm run build && firebase serve --only functions",
+    "shell": "npm run build && firebase experimental:functions:shell",
+    "start": "npm run shell"
   },
   "author": "Efeturi Money",
-  "license": "MIT"
+  "license": "MIT",
+  "private": true
 }

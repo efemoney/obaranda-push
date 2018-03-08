@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "es2016",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "watch": true,
+    "sourceMap": true,
+    "inlineSource": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+
+    "baseUrl": "src/app",
+    "outDir": "lib"
+  },
+  "exclude": [
+    "node_modules"
+  ]
+}

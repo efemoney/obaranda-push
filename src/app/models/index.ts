@@ -96,7 +96,7 @@ export const settings: {
 function getFirebaseAdminConfig(): AppOptions {
 
   return {
-    credential: credential.cert(require('../service-account-key')),
+    credential: credential.cert(require('../../../service-account-key')),
     databaseURL: process.env.FIREBASE_DB_URL,
   }
 }

@@ -10,7 +10,11 @@
     "strictNullChecks": true,
 
     "baseUrl": "src/app",
-    "outDir": "lib"
+    "outDir": "lib",
+
+    "paths": {
+      "root/*": ["../../*"]
+    }
   },
   "exclude": [
     "node_modules"

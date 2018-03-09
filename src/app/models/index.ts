@@ -1,9 +1,12 @@
 import {AppOptions, credential, firestore as store, initializeApp} from "firebase-admin";
 import {Firestore} from "@google-cloud/firestore";
-import {ComicNotFoundError} from '../errors'
 import {Comic} from "./comic";
+import {ComicNotFoundError} from '../errors'
+import serviceAccount from "../service-account-key";
+
 
 initializeApp(getFirebaseAdminConfig());
+
 
 const firestore: Firestore = store();
 
@@ -96,7 +99,7 @@ export const settings: {
 function getFirebaseAdminConfig(): AppOptions {
 
   return {
-    credential: credential.cert(require('../../../service-account-key')),
+    credential: credential.cert(serviceAccount),
     databaseURL: process.env.FIREBASE_DB_URL,
   }
 }

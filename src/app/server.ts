@@ -13,6 +13,8 @@ const port = process.env.PORT || 8080; // Heroku sets a PORT env variable
 
 const app = express();
 
+app.set('json spaces', 2);
+
 app.use(cors()); // cors
 app.use(compression()); // gzip compression
 app.use(json());
@@ -27,10 +29,10 @@ app.use(((err, req, res, next) => {
   let error = {
     name: err.name || 'Error',
     message: err.message,
-    ...process.env.NODE_ENV !== 'production' && {stack: err.stack}
+    ...(req.query.errorStack === 'true') && (process.env.NODE_ENV !== 'production') && {stack: err.stack}
   };
 
-  return res.status(err.status).send(error);
+  return res.status(err.status || 500).send(error);
 
 }) as ErrorRequestHandler);
 

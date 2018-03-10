@@ -1,5 +1,5 @@
 import {RequestHandler} from "express";
-import {users as usersModel} from "../../models/index";
+import {users as usersModel} from "../../models";
 
 export const updateToken = <RequestHandler>((req, res, next) => {
 
@@ -7,7 +7,7 @@ export const updateToken = <RequestHandler>((req, res, next) => {
   const token = req.body.token;
 
   usersModel.putDeviceToken(uid, token)
-    .then(() => res.sendStatus(200).json())
+    .then(() => res.status(200).json())
     .catch(err => next(err))
   ;
 
@@ -19,7 +19,7 @@ export const updateCurrentPage = <RequestHandler>((req, res, next) => {
   const page = req.body.page;
 
   usersModel.putCurrentPage(uid, page)
-    .then(() => res.sendStatus(200).json())
+    .then(() => res.status(200).json())
     .catch(err => next(err))
   ;
 

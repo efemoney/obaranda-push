@@ -45,7 +45,9 @@ export const comics: {
 
   putAll: (comics: Comic[]) => Promise<any>;
 
-  getLatest: () => Promise<Comic>
+  getAll: (limit: number, offset: number) => Promise<Comic[]>;
+
+  getByLatest: () => Promise<Comic>;
 
   getByPage: (page: number) => Promise<Comic>;
 
@@ -55,14 +57,23 @@ export const comics: {
     comics.map(comic => firestore.collection('comics').add(comic))
   ),
 
-  getLatest: () => firestore.collection('comics')
+  getAll: (limit, offset) => firestore.collection('comics')
+    .orderBy('page', 'desc')
+    .limit(limit)
+    .offset(offset)
+    .get()
+    .then(snapshot => snapshot.docs)
+    .then(docs => docs.map(it => it.data() as Comic))
+  ,
+
+  getByLatest: () => firestore.collection('comics')
     .orderBy('page', 'desc')
     .limit(1)
     .get()
     .then(snapshot => snapshot.docs)
     .then(docs => {
       if (docs.length === 1) return docs[0].data() as Comic;
-      throw new ComicNotFoundError()
+      throw new ComicNotFoundError('latest')
     })
   ,
 
@@ -72,7 +83,7 @@ export const comics: {
     .then(snapshot => snapshot.docs)
     .then(docs => {
       if (docs.length === 1) return docs[0].data() as Comic;
-      throw new ComicNotFoundError()
+      throw new ComicNotFoundError(`page ${page}`)
     })
   ,
 

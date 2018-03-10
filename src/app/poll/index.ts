@@ -1,13 +1,12 @@
-/* Yes. Pollis is a reference to a place in the series, The 100 (watch it!) */
+/* Pollis is a reference to the series, The 100 (watch it!) */
 
-import {Observable} from "rxjs/Rx";
 import {Router} from "express";
-import {Palette} from "node-vibrant/lib/color";
 import {AuthenticationError} from "../errors";
+import {Palette} from "node-vibrant/lib/color";
 import {Comic, ComicImages, comics as comicModel, settings as settingsModel} from "../models";
 import * as moment from "moment";
+import oboe = require("oboe");
 import Vibrant = require("node-vibrant");
-import oboeFunction = require("oboe");
 
 const probe = require("probe-image-size");
 
@@ -42,7 +41,7 @@ interface ImageMetadata {
   vibrant?: string,
 }
 
-type ComicImagesMetadata = ImageMetadata[];
+type ComicImagesMetadatas = ImageMetadata[];
 
 
 const logError = (error: Error) => console.error(error);
@@ -57,110 +56,74 @@ const findVibrant: (palette: Palette) => string | undefined = palette => {
   return palette.Vibrant ? palette.Vibrant.getHex() : palette.DarkVibrant ? palette.DarkVibrant.getHex() : undefined;
 };
 
-const computeImagesMetadata: (comicImages: ComicImages) => Observable<ComicImagesMetadata> = comicImages => {
+async function computeMetadatas(images: ComicImages): Promise<ComicImagesMetadatas> {
 
-  return Observable.from(comicImages)
-    .flatMap(image => {
+  let imagesMetadatas = [];
 
-      type WidthAndHeight = { width: string, height: string }
-      type MutedAndVibrant = { muted?: string, vibrant?: string }
+  for (let i = 0; i < images.length; i++) {
 
-      const size = probe(image.url) as PromiseLike<{ width: string, height: string }>;
+    let image = images[i];
 
-      const palette = Vibrant.from(image.url).getPalette();
+    const palette = await Vibrant.from(image.url).getPalette();
+    const {width, height} = await probe(image.url, {timeout: 120_000});
 
-      const sObservable: Observable<WidthAndHeight> = Observable.fromPromise(size)
-        .map(result => ({
-          width: result.width,
-          height: result.height,
-        }))
-      ;
+    imagesMetadatas.push({
+      width,
+      height,
+      muted: findMuted(palette),
+      vibrant: findVibrant(palette)
+    } as ImageMetadata);
+  }
 
-      const pObservable: Observable<MutedAndVibrant> = Observable.fromPromise(palette)
-        .map(palette => ({
-          muted: findMuted(palette),
-          vibrant: findVibrant(palette)
-        }))
-      ;
+  return imagesMetadatas;
+}
 
-      return pObservable.zip(sObservable, (p, s) => ({
-        width: s.width,
-        height: s.height,
-        muted: p.muted,
-        vibrant: p.vibrant
-      }) as ImageMetadata);
-    })
-    .toArray()
-  ;
+async function mapAndUpdateItems(items: FeedItem[]): Promise<Comic[]> {
 
-};
-
-const saveNewItems: (comics: FeedItem[]) => Promise<any> = items => {
-
-  if (items.length < 1) return Promise.resolve();
+  if (items.length < 1) return [];
 
   // items were read in reverse chronological order (latest first),
   // correct by reversing then map to our own domain object
-  const comics: Comic[] = items
-    .reverse()
-    .map(item => ({
-      page: item.page,
-      url: item.url,
-      title: item.title,
-      permalink: item.permalink,
-      pubDate: item.date_published,
-      images: item.images,
-      post: item.post,
-      author: item.author,
-    }) as Comic)
-  ;
+  const comics = items.map(item => ({
+    page: item.page,
+    url: item.url,
+    title: item.title,
+    permalink: item.permalink,
+    pubDate: item.date_published,
+    images: item.images,
+    post: item.post,
+    author: item.author,
+  }) as Comic);
 
-  return Observable.from(comics)
-    .map(comic => comic.images)
-    .flatMap(comicImages => computeImagesMetadata(comicImages))
-    .toArray()
-    .toPromise()
-    .then(arrayOfMetadatas => {
+  for (let i = 0; i < comics.length; i++) {
 
-      comics.forEach((comic, i) => {
+    let comic = comics[i];
+    let images = comic.images;
+    let imagesMetadatas = await computeMetadatas(images);
 
-        let imagesMetadata = arrayOfMetadatas[i];
+    images.forEach((image, index) => {
 
-        comic.images.forEach((image, j) => {
+      const {width, height, muted, vibrant} = imagesMetadatas[index];
 
-          let metadata = imagesMetadata[j];
+      image.palette = {muted, vibrant};
+      image.size = {width, height};
+    });
+  }
 
-          image.palette = {
-            muted: metadata.muted,
-            vibrant: metadata.vibrant
-          };
+  return comics;
 
-          image.size = {
-            width: metadata.width,
-            height: metadata.height
-          }
-
-        });
-      })
-
-    })
-  ;
-
-};
+}
 
 
 const router: Router = Router();
 
-router.post('/', (req, res, next) => {
+router.post('/', async (req, res, next) => {
 
   const reqAuth = (req.headers.authorization as string || ' ').split(' ')[1] || '';
 
-  const [login, password] = new Buffer(reqAuth).toString('base64').split(':');
+  const [login, password] = new Buffer(reqAuth, 'base64').toString().split(':');
 
-  const auth = {
-    login: process.env.POLL_USERNAME,
-    password: process.env.POLL_PASSWORD,
-  };
+  const auth = {login: process.env.POLL_USERNAME, password: process.env.POLL_PASSWORD};
 
   // Verify login and password are set and correct
   if (!login || !password || login !== auth.login || password !== auth.password) {
@@ -169,44 +132,43 @@ router.post('/', (req, res, next) => {
     return
   }
 
-  settingsModel.getLastPolledTime()
-    .then(time => moment(time))
-    .then(lastPolled => {
+  res.sendStatus(204).end();
 
-      const newItems: FeedItem[] = [];
-      const feedUrl = process.env.OBARANDA_FEED_URL as string;
-      const oboe = oboeFunction(feedUrl);
+  const time = await settingsModel.getLastPolledTime();
 
-      oboe
-        .node('!.items.*', item => {
+  const lastPolled = moment(time);
 
-          let pubdate = moment(item.date_published);
+  const feedUrl = process.env.OBARANDA_FEED_URL as string;
 
-          if (pubdate.isAfter(lastPolled)) newItems.push(item); else {
+  const newItems: FeedItem[] = [];
 
-            oboe.abort();
+  oboe(feedUrl)
+    .node('!.items.*', async function (item: FeedItem) {
 
-            saveNewItems(newItems)
-              .then(() => settingsModel.setLastPolledTime(moment().valueOf()))
-            ;
-          }
+      let pubdate = moment(item.date_published);
 
-        })
-        .done(() => {
+      if (pubdate.isAfter(lastPolled)) newItems.push(item); else {
 
-          saveNewItems(newItems)
-            .then(() => settingsModel.setLastPolledTime(moment().valueOf()))
-            .catch(e => logError(e))
-          ;
+        this.abort();
 
-        })
-      ;
+        const comics = await mapAndUpdateItems(newItems);
+
+        await comicModel.putAll(comics);
+
+        await settingsModel.setLastPolledTime(moment().valueOf());
+      }
 
     })
-    .catch(e => logError(e))
-  ;
+    .done(async function () {
 
-  res.sendStatus(200).end()
+      const comics = await mapAndUpdateItems(newItems);
+
+      await comicModel.putAll(comics);
+
+      await settingsModel.setLastPolledTime(moment().valueOf());
+
+    })
+  ;
 
 });
 

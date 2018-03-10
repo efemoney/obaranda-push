@@ -1,7 +1,7 @@
 import {RequestHandler, Router} from "express";
 import {InvalidUserError} from "../errors";
-import * as comicsRoute from "./comics/index";
-import * as usersRoute from "./users/index";
+import * as comicsRoute from "./comics";
+import * as usersRoute from "./users";
 
 
 const debugLogHandler: RequestHandler = (req, res, next) => {
@@ -29,7 +29,7 @@ const router: Router = Router();
 
 if (process.env.NODE_ENV !== 'production') router.use(debugLogHandler);
 
-router.get('/comics', comicsRoute.getPage);
+router.get('/comics', comicsRoute.getAll);
 router.get('/comics/:page(\\d+)', comicsRoute.getPage);
 router.get('/comics/latest', comicsRoute.getLatest);
 router.put('/users/token', authHandler, usersRoute.updateToken);

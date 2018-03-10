@@ -1,4 +1,3 @@
-
 export type Size = {
 
   width: string,

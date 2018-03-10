@@ -1,4 +1,3 @@
-
 class BaseError extends Error {
 
   constructor(
@@ -21,18 +20,18 @@ class BaseError extends Error {
 
 export class InvalidUserError extends BaseError {
   constructor() {
-    super('Invalid or No User. Please login.', HttpStatusCode.FORBIDDEN);
+    super('Invalid or No User. Please login.', HttpStatusCode.UNAUTHORIZED);
   }
 }
 
 export class AuthenticationError extends BaseError {
   constructor() {
-    super('Unauthorized. You shall not pass.', HttpStatusCode.UNAUTHORIZED);
+    super('You cannot access this resource. You shall not pass.', HttpStatusCode.FORBIDDEN);
   }
 }
 
 export class ComicNotFoundError extends BaseError {
-  constructor() {
-    super('Could not find comic', HttpStatusCode.NOT_FOUND);
+  constructor(public query?: string) {
+    super(`Could not find comic${query ? ` (${query})` : ''}`, HttpStatusCode.NOT_FOUND);
   }
 }

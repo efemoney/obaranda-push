@@ -1,12 +1,12 @@
 import {RequestHandler} from "express";
-import {comics as comicsModel} from "../../models/index";
+import {comics as comicsModel} from "../../models";
 
-export const get = <RequestHandler>((req, res, next) => {
+export const getAll = <RequestHandler>((req, res, next) => {
 
-  const page = parseInt(req.params.page);
+  const {limit = '10', offset = '0'} = req.query;
 
-  comicsModel.getByPage(page)
-    .then(comic => res.status(200).json(comic))
+  comicsModel.getAll(parseInt(limit), parseInt(offset))
+    .then(comics => res.status(200).json(comics))
     .catch(err => next(err))
   ;
 
@@ -25,7 +25,7 @@ export const getPage = <RequestHandler>((req, res, next) => {
 
 export const getLatest = <RequestHandler>((req, res, next) => {
 
-  comicsModel.getLatest()
+  comicsModel.getByLatest()
     .then(comic => res.status(200).json(comic))
     .catch(err => next(err))
   ;

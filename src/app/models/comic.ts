@@ -1,4 +1,4 @@
-import {ComicImages, Image} from "./image";
+import {ComicImages} from "./image";
 import {Post} from "./post";
 import {Author} from "./author";
 

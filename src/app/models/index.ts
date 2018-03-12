@@ -43,19 +43,43 @@ export const users: {
 
 export const comics: {
 
-  putAll: (comics: Comic[]) => Promise<any>;
+  putCount: (count: number) => Promise<any>;
+
+  putAll: (comics: Comic[]) => Promise<string[]>;
+
+  putComic: (comic: Comic) => Promise<string>;
+
+  getCount: () => Promise<number>;
 
   getAll: (limit: number, offset: number) => Promise<Comic[]>;
 
-  getByLatest: () => Promise<Comic>;
-
   getByPage: (page: number) => Promise<Comic>;
+
+  getByLatest: () => Promise<Comic>;
 
 } = {
 
-  putAll: comics => Promise.all(
-    comics.map(comic => firestore.collection('comics').add(comic))
-  ),
+  putCount: count => firestore.collection('internal')
+    .doc('comics-meta')
+    .set({'total-count': count}, {merge: true})
+  ,
+
+  putAll: async comicsArray => {
+
+    const oldCount = await comics.getCount();
+
+    const uids = await Promise.all(comicsArray.map(comic => comics.putComic(comic)));
+
+    await comics.putCount(oldCount + comicsArray.length);
+
+    return uids;
+
+  },
+
+  putComic: comic => firestore.collection('comics')
+    .add(comic)
+    .then(ref => ref.id)
+  ,
 
   getAll: (limit, offset) => firestore.collection('comics')
     .orderBy('page', 'desc')
@@ -85,6 +109,12 @@ export const comics: {
       if (docs.length === 1) return docs[0].data() as Comic;
       throw new ComicNotFoundError(`page ${page}`)
     })
+  ,
+
+  getCount: () => firestore.collection('internal')
+    .doc('comics-meta')
+    .get()
+    .then(doc => doc.exists ? (doc.get('total-count') || 0) : 0)
   ,
 
 };

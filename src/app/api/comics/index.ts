@@ -1,14 +1,38 @@
 import {RequestHandler} from "express";
 import {comics as comicsModel} from "../../models";
+import {BasicPaginationLink, LinkHeader} from "../../util/pagination-helper";
 
-export const getAll = <RequestHandler>((req, res, next) => {
 
-  const {limit = '10', offset = '0'} = req.query;
+export const getAll = <RequestHandler>(async (req, res, next) => {
 
-  comicsModel.getAll(parseInt(limit), parseInt(offset))
-    .then(comics => res.status(200).json(comics))
-    .catch(err => next(err))
-  ;
+  let {limit = '20', offset = '0'} = req.query;
+  limit = parseInt(limit);
+  offset = parseInt(offset);
+
+  try {
+    const comics = await comicsModel.getAll(limit, offset);
+    const totalCount = await comicsModel.getCount();
+
+    const originalUrl = req.protocol + '://' + req.hostname + req.originalUrl;
+
+    const linkHeader = new LinkHeader();
+
+    if (offset > 0)
+      linkHeader.push(new BasicPaginationLink('prev', originalUrl, limit, Math.max(offset - limit, 0)));
+
+    if (offset + comics.length <= totalCount)
+      linkHeader.push(new BasicPaginationLink('next', originalUrl, limit, offset + comics.length));
+
+    res
+      .status(200)
+      .header('Link', linkHeader.get())
+      .header('X-Total-Count', totalCount.toString())
+      .json(comics)
+    ;
+
+  } catch (err) {
+    next(err);
+  }
 
 });
 

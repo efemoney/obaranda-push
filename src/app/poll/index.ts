@@ -5,6 +5,7 @@ import {AuthenticationError} from "../errors";
 import {Palette} from "node-vibrant/lib/color";
 import {Comic, ComicImages, comics as comicModel, settings as settingsModel} from "../models";
 import * as moment from "moment";
+import {unescape} from "he";
 import oboe = require("oboe");
 import Vibrant = require("node-vibrant");
 
@@ -36,9 +37,9 @@ interface ImageMetadata {
 
   height: string,
 
-  muted?: string,
+  muted: string,
 
-  vibrant?: string,
+  vibrant: string,
 }
 
 type ComicImagesMetadatas = ImageMetadata[];
@@ -46,14 +47,14 @@ type ComicImagesMetadatas = ImageMetadata[];
 
 const logError = (error: Error) => console.error(error);
 
-const findMuted: (palette: Palette) => string | undefined = palette => {
+const findMuted: (palette: Palette) => string | null = palette => {
 
-  return palette.Muted ? palette.Muted.getHex() : palette.DarkMuted ? palette.DarkMuted.getHex() : undefined;
+  return palette.Muted ? palette.Muted.getHex() : palette.DarkMuted ? palette.DarkMuted.getHex() : null;
 };
 
-const findVibrant: (palette: Palette) => string | undefined = palette => {
+const findVibrant: (palette: Palette) => string | null = palette => {
 
-  return palette.Vibrant ? palette.Vibrant.getHex() : palette.DarkVibrant ? palette.DarkVibrant.getHex() : undefined;
+  return palette.Vibrant ? palette.Vibrant.getHex() : palette.DarkVibrant ? palette.DarkVibrant.getHex() : null;
 };
 
 async function computeMetadatas(images: ComicImages): Promise<ComicImagesMetadatas> {
@@ -82,17 +83,18 @@ async function mapAndUpdateItems(items: FeedItem[]): Promise<Comic[]> {
 
   if (items.length < 1) return [];
 
-  // items were read in reverse chronological order (latest first),
-  // correct by reversing then map to our own domain object
   const comics = items.map(item => ({
     page: item.page,
     url: item.url,
-    title: item.title,
+    title: unescape(item.title),
     permalink: item.permalink,
     pubDate: item.date_published,
     images: item.images,
-    post: item.post,
-    author: item.author,
+    post: {
+      title: !item.post.title ? undefined : unescape(item.post.title),
+      body: !item.post.body ? undefined : unescape(item.post.body)
+    },
+    author: item.author
   }) as Comic);
 
   for (let i = 0; i < comics.length; i++) {
@@ -111,7 +113,6 @@ async function mapAndUpdateItems(items: FeedItem[]): Promise<Comic[]> {
   }
 
   return comics;
-
 }
 
 

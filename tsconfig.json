@@ -3,7 +3,6 @@
     "target": "es2015",
     "module": "commonjs",
     "moduleResolution": "node",
-    "watch": true,
     "sourceMap": true,
     "inlineSources": true,
     "noImplicitAny": true,

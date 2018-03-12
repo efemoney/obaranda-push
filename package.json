@@ -14,9 +14,7 @@
     "oboe": "^2.1.4",
     "probe-image-size": "^4.0.0",
     "query-string": "^5.1.0",
-    "request": "^2.83.0"
-  },
-  "devDependencies": {
+    "request": "^2.83.0",
     "@google-cloud/firestore": "^0.12.0",
     "@types/compression": "^0.0.35",
     "@types/cors": "^2.8.3",

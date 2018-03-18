@@ -12,7 +12,7 @@ export class LinkHeader extends Array<PaginationLink> {
   get(): string {
 
     return this
-      .map(link => `<${link.url}> rel="${link.rel}"`)
+      .map(link => `<${link.url}>; rel="${link.rel}"`)
       .join(', ');
   }
 }

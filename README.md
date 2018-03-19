@@ -41,7 +41,7 @@ $ npm start
 If successful, the app is now available at http://localhost:8080/.
 
 ### Tests
-Sigh. There are no tests (for now). Contributions are welcome.
+There are no tests (for now). Contributions are welcome.
 
 </br>
 

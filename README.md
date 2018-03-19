@@ -35,11 +35,8 @@ You need to have [Node JS](https://www.nodejs.org) and [Npm](https://www.npmjs.o
 
 ### Run locally
 ```sh
-npm install
-```
-and then 
-```sh
-npm start
+$ npm install
+$ npm start
 ```
 If successful, the app is now available at http://localhost:8080/.
 

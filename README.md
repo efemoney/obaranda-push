@@ -115,7 +115,7 @@ a [paginated collection](#pagination) of `ComicOverview`. The collection is sort
 ]
 ```
 
-##### Get A Comic by Page
+#### Get A Comic by Page
 `GET /comics/{page}`
 
 *returns:*
@@ -155,7 +155,7 @@ the  `Comic` at `:page`.
 }
 ```
 
-##### Get Latest Comic
+#### Get Latest Comic
 `GET /comics/latest`
 
 *returns:*

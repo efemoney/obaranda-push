@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "es2015",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "inlineSources": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+
+    "baseUrl": "src/app",
+    "outDir": "lib",
+
+    "paths": {
+      "root/*": ["../../*"],
+      "app/*": ["./*"]
+    }
+  },
+  "exclude": [
+    "node_modules"
+  ]
+}

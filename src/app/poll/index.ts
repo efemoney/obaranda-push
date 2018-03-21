@@ -59,7 +59,7 @@ const findVibrant: (palette: Palette) => string | null = palette => {
 
 async function computeMetadatas(images: ComicImages): Promise<ComicImagesMetadatas> {
 
-  let imagesMetadatas = [];
+  let imagesMetadatas: ComicImagesMetadatas = [];
 
   for (let i = 0; i < images.length; i++) {
 
@@ -91,8 +91,8 @@ async function mapAndUpdateItems(items: FeedItem[]): Promise<Comic[]> {
     pubDate: item.date_published,
     images: item.images,
     post: {
-      title: !item.post.title ? undefined : unescape(item.post.title),
-      body: !item.post.body ? undefined : unescape(item.post.body)
+      title: !item.post.title ? null : unescape(item.post.title),
+      body: !item.post.body ? null : unescape(item.post.body)
     },
     author: item.author
   }) as Comic);

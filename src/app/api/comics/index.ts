@@ -12,20 +12,7 @@ export const getAll = <RequestHandler>(async (req, res, next) => {
   try {
 
     // retrieve comics
-    let comics: any[] = await comicsModel.getAll(limit, offset);
-
-    // lighten payload. would've been great if could be done in firestore but sub document queries aren't supported
-    comics = comics.map(it => ({
-      page: it.page,
-      title: it.title,
-      permalink: it.permalink,
-      pubDate: it.pubDate,
-      previewImg: {
-        url: it.images[0].url,
-        palette: it.images[0].palette.muted || it.images[0].palette.vibrant
-      }
-    }));
-
+    const comics: any[] = await comicsModel.getAll(limit, offset);
     const totalCount = await comicsModel.getCount();
 
     // From heroku, req.protocol is always 'http', original user req protocol is in 'X-Forward-Proto'

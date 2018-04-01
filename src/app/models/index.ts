@@ -1,5 +1,5 @@
 import {credential, firestore as store, initializeApp} from "firebase-admin";
-import {Firestore} from "@google-cloud/firestore";
+import {Firestore, WriteResult} from "@google-cloud/firestore";
 import {Comic} from "./comic";
 import {ComicNotFoundError} from '../errors'
 import serviceAccount from "../service-account-key";
@@ -43,11 +43,15 @@ export const users: {
 
 export const comics: {
 
-  putCount: (count: number) => Promise<any>;
+  putCount: (count: number) => Promise<WriteResult>;
 
-  putAll: (comics: Comic[]) => Promise<string[]>;
+  putAll: (comics: Comic[]) => Promise<any>;
 
-  putComic: (comic: Comic) => Promise<string>;
+  putComic: (comic: Comic) => Promise<WriteResult>;
+
+  deleteAll: (pages: number[]) => Promise<any>;
+
+  deleteByPage: (page: number) => Promise<WriteResult>;
 
   getCount: () => Promise<number>;
 
@@ -68,17 +72,29 @@ export const comics: {
 
     const oldCount = await comics.getCount();
 
-    const uids = await Promise.all(comicsArray.map(comic => comics.putComic(comic)));
+    await Promise.all(comicsArray.map(comic => comics.putComic(comic)));
 
     await comics.putCount(oldCount + comicsArray.length);
-
-    return uids;
-
   },
 
   putComic: comic => firestore.collection('comics')
-    .add(comic)
-    .then(ref => ref.id)
+    .doc(`${comic.page}`)
+    .set(comic)
+  ,
+
+  deleteAll: async pages => {
+
+    const oldCount = await comics.getCount();
+
+    await Promise.all(pages.map(page => comics.deleteByPage(page)));
+
+    await comics.putCount(Math.max(oldCount - pages.length, 0));
+  }
+  ,
+
+  deleteByPage: page => firestore.collection('comics')
+    .doc(`${page}`)
+    .delete()
   ,
 
   getAll: (limit, offset) => firestore.collection('comics')

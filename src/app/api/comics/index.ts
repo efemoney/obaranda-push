@@ -15,8 +15,9 @@ export const getAll = <RequestHandler>(async (req, res, next) => {
     const comics = await comicsModel.getAll(limit, offset);
     const totalCount = await comicsModel.getCount();
 
-    // From heroku, req.protocol is always 'http', original user req protocol is in 'X-Forward-Proto'
-    const originalUrl = req.get('X-Forwarded-Proto') + '://' + req.hostname + req.originalUrl;
+    // On heroku, req.protocol is always 'http', original user req protocol is in 'X-Forward-Proto'
+    const protocol = req.get('X-Forwarded-Proto') || req.protocol;
+    const originalUrl = protocol + '://' + req.hostname + req.originalUrl;
 
     const linkHeader = new LinkHeader();
 

@@ -47,43 +47,21 @@ type ComicImagesMetadatas = ImageMetadata[];
 
 const logError = (error: Error) => console.error(error);
 
-const findMuted: (palette: Palette) => string | null = palette => {
+function findMuted(palette: Palette): string | null {
 
   return palette.Muted ? palette.Muted.getHex() : palette.DarkMuted ? palette.DarkMuted.getHex() : null;
-};
-
-const findVibrant: (palette: Palette) => string | null = palette => {
-
-  return palette.Vibrant ? palette.Vibrant.getHex() : palette.DarkVibrant ? palette.DarkVibrant.getHex() : null;
-};
-
-async function computeMetadatas(images: ComicImages): Promise<ComicImagesMetadatas> {
-
-  let imagesMetadatas: ComicImagesMetadatas = [];
-
-  for (let i = 0; i < images.length; i++) {
-
-    let image = images[i];
-
-    const palette = await Vibrant.from(image.url).getPalette();
-    const {width, height} = await probe(image.url, {timeout: 120_000});
-
-    imagesMetadatas.push({
-      width,
-      height,
-      muted: findMuted(palette),
-      vibrant: findVibrant(palette)
-    } as ImageMetadata);
-  }
-
-  return imagesMetadatas;
 }
 
-async function mapAndUpdateItems(items: FeedItem[]): Promise<Comic[]> {
+function findVibrant(palette: Palette): string | null {
+
+  return palette.Vibrant ? palette.Vibrant.getHex() : palette.DarkVibrant ? palette.DarkVibrant.getHex() : null;
+}
+
+function mapItems(items: FeedItem[]): Comic[] {
 
   if (items.length < 1) return [];
 
-  const comics = items.map(item => ({
+  return items.map(item => ({
     page: item.page,
     url: item.url,
     title: unescape(item.title),
@@ -96,6 +74,49 @@ async function mapAndUpdateItems(items: FeedItem[]): Promise<Comic[]> {
     },
     author: item.author
   }) as Comic);
+}
+
+async function computeMetadatas(images: ComicImages): Promise<ComicImagesMetadatas> {
+
+  let imagesMetadatas: ComicImagesMetadatas = [];
+
+  for (let i = 0; i < images.length; i++) {
+
+    let image = images[i];
+
+    const palette = await Vibrant.from(image.url).getPalette();
+    const {width, height} = await probe(image.url, {timeout: 180_000});
+
+    imagesMetadatas.push({
+      width,
+      height,
+      muted: findMuted(palette),
+      vibrant: findVibrant(palette)
+    } as ImageMetadata);
+  }
+
+  return imagesMetadatas;
+}
+
+async function handleUpdatedFeedItems(updatedItems: FeedItem[]) {
+  // Updated items can be added/modified or deleted
+  // Item is deleted when its images array length is 0 else its added/modified
+
+  const addedItems: FeedItem[] = [];
+  const deletedPages: number[] = [];
+
+  updatedItems.forEach(u => u.images.length > 0 ? addedItems.push(u) : deletedPages.push(u.page));
+
+  // noinspection JSIgnoredPromiseFromCall
+  await handleDeleted(deletedPages);
+
+  // noinspection JSIgnoredPromiseFromCall
+  await handleAdded(mapItems(addedItems));
+}
+
+async function handleAdded(comics: Comic[]) {
+
+  if (comics.length < 1) return Promise.resolve();
 
   for (let i = 0; i < comics.length; i++) {
 
@@ -112,11 +133,19 @@ async function mapAndUpdateItems(items: FeedItem[]): Promise<Comic[]> {
     });
   }
 
-  return comics;
+  return await comicModel.putAll(comics);
+}
+
+async function handleDeleted(deletedPages: number[]) {
+
+  if (deletedPages.length < 1) return Promise.resolve();
+
+  return await comicModel.deleteAll(deletedPages);
 }
 
 
 const router: Router = Router();
+
 
 router.post('/', async (req, res, next) => {
 
@@ -135,43 +164,30 @@ router.post('/', async (req, res, next) => {
 
   res.sendStatus(204).end();
 
-  const time = await settingsModel.getLastPolledTime();
-
-  const lastPolled = moment(time);
-
   const feedUrl = process.env.OBARANDA_FEED_URL as string;
 
-  const newItems: FeedItem[] = [];
+  const lastPolledTime = moment(await settingsModel.getLastPolledTime());
+  const updatedItems: FeedItem[] = [];
 
   oboe(feedUrl)
     .node('!.items.*', async function (item: FeedItem) {
 
       let pubdate = moment(item.date_published);
 
-      if (pubdate.isAfter(lastPolled)) newItems.push(item); else {
-
+      if (pubdate.isAfter(lastPolledTime)) updatedItems.push(item); else {
         this.abort();
-
-        const comics = await mapAndUpdateItems(newItems);
-
-        await comicModel.putAll(comics);
-
+        await handleUpdatedFeedItems(updatedItems);
         await settingsModel.setLastPolledTime(moment().valueOf());
       }
 
     })
     .done(async function () {
-
-      const comics = await mapAndUpdateItems(newItems);
-
-      await comicModel.putAll(comics);
-
+      await handleUpdatedFeedItems(updatedItems);
       await settingsModel.setLastPolledTime(moment().valueOf());
-
     })
   ;
 
 });
 
-export default router
 
+export default router

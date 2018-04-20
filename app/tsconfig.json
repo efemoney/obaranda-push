@@ -8,13 +8,8 @@
     "noImplicitAny": true,
     "strictNullChecks": true,
 
-    "baseUrl": "src/app",
-    "outDir": "lib",
-
-    "paths": {
-      "root/*": ["../../*"],
-      "app/*": ["./*"]
-    }
+    "baseUrl": "src",
+    "outDir": "lib"
   },
   "exclude": [
     "node_modules"

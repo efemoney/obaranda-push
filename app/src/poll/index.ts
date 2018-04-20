@@ -6,10 +6,21 @@ import {Palette} from "node-vibrant/lib/color";
 import {Comic, ComicImages, comics as comicModel, settings as settingsModel} from "../models";
 import * as moment from "moment";
 import {unescape} from "he";
+
 import oboe = require("oboe");
 import Vibrant = require("node-vibrant");
 
+const Disqus = require("neo-disqus");
 const probe = require("probe-image-size");
+
+const client = new Disqus({
+  access_token: process.env.DISQUS_ACCESS_TOKEN,
+  api_key: process.env.DISQUS_PUB_KEY,
+  api_secret: process.env.DISQUS_SECRET_KEY,
+});
+
+// Depends upon implementation details --- I'M SORRY :'(
+client.options.request_options.useQuerystring = true;
 
 
 interface FeedItem {
@@ -107,10 +118,7 @@ async function handleUpdatedFeedItems(updatedItems: FeedItem[]) {
 
   updatedItems.forEach(u => u.images.length > 0 ? addedItems.push(u) : deletedPages.push(u.page));
 
-  // noinspection JSIgnoredPromiseFromCall
   await handleDeleted(deletedPages);
-
-  // noinspection JSIgnoredPromiseFromCall
   await handleAdded(mapItems(addedItems));
 }
 
@@ -121,6 +129,13 @@ async function handleAdded(comics: Comic[]) {
   for (let i = 0; i < comics.length; i++) {
 
     let comic = comics[i];
+
+    // Disqus api
+    let forum = process.env.DISQUS_FORUM;
+    let opts = {forum, 'thread:link': comic.url};
+
+    comic.commentsCount = (await client.get("threads/set", opts)).response[0].posts;
+
     let images = comic.images;
     let imagesMetadatas = await computeMetadatas(images);
 
@@ -133,36 +148,48 @@ async function handleAdded(comics: Comic[]) {
     });
   }
 
-  return await comicModel.putAll(comics);
+  return await comicModel.putAllComics(comics);
 }
 
 async function handleDeleted(deletedPages: number[]) {
 
   if (deletedPages.length < 1) return Promise.resolve();
 
-  return await comicModel.deleteAll(deletedPages);
+  return await comicModel.deleteComicsByPage(deletedPages);
 }
 
+async function updateOlderCommentCounts() {
 
-const router: Router = Router();
+  // Strategy is; get all the latest disqus comments after the last time we checked
+  // Map comments to their respective threads ids and de-dup the list
+  // Get the set of threads by id and update the comments count for all of them
 
+  const forum = process.env.DISQUS_FORUM;
+  const limit = 100; // set maximum limit
 
-router.post('/', async (req, res, next) => {
+  const lastPolledCommentTime = moment(await settingsModel.getLastPolledCommentTime()).format();
 
-  const reqAuth = (req.headers.authorization as string || ' ').split(' ')[1] || '';
+  const opts1: any = {forum, limit, start: lastPolledCommentTime};
+  const posts: { thread: string }[] = (await client.get('posts/list', opts1)).response;
 
-  const [login, password] = new Buffer(reqAuth, 'base64').toString().split(':');
+  if (posts.length > 0) {
+    const threadIds = Array.from(new Set(posts.map(post => post.thread)));
 
-  const auth = {login: process.env.POLL_USERNAME, password: process.env.POLL_PASSWORD};
+    const opts2: any = {forum, thread: threadIds};
+    const threads: { link: string, posts: number }[] = (await client.get('threads/set', opts2)).response;
 
-  // Verify login and password are set and correct
-  if (!login || !password || login !== auth.login || password !== auth.password) {
-    res.set('WWW-Authenticate', 'Basic realm="cron-job"');
-    next(new AuthenticationError());
-    return
+    for (let thread of threads) {
+      const page = await comicModel.getPageByUrl(thread.link);
+      if (page === 0) continue;
+
+      await comicModel.putCommentsCount(page, thread.posts); // update comments count for thread
+    }
   }
 
-  res.sendStatus(204).end();
+  await settingsModel.setLastPolledCommentTime(moment().valueOf())
+}
+
+async function updateComicItems() {
 
   const feedUrl = process.env.OBARANDA_FEED_URL as string;
 
@@ -186,8 +213,34 @@ router.post('/', async (req, res, next) => {
       await settingsModel.setLastPolledTime(moment().valueOf());
     })
   ;
+}
+
+
+const router: Router = Router();
+
+router.post('/', async (req, res, next) => {
+
+  const reqAuth = (req.headers.authorization as string || ' ').split(' ')[1] || '';
+
+  const [login, password] = new Buffer(reqAuth, 'base64').toString().split(':');
+
+  const auth = {login: process.env.POLL_USERNAME, password: process.env.POLL_PASSWORD};
+
+  // Verify login and password are set and correct
+  if (!login || !password || login !== auth.login || password !== auth.password) {
+    res.set('WWW-Authenticate', 'Basic realm="cron-job"');
+    next(new AuthenticationError());
+    return
+  }
+
+  res.sendStatus(204).end();
+
+  // update the comment counts for existing comics
+  await updateOlderCommentCounts();
+
+  // handle updated (added and deleted) comics
+  await updateComicItems();
 
 });
-
 
 export default router

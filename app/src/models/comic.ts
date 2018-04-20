@@ -19,4 +19,6 @@ export type Comic = {
   post: Post
 
   author: Author,
+
+  commentsCount: number,
 }

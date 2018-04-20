@@ -1,13 +1,15 @@
 import {config as loadEnv} from "dotenv";
+
+if (process.env.NODE_ENV !== 'production') loadEnv(); // Load environment variables if necessary
+
 import * as cors from 'cors'
 import * as express from 'express'
 import {ErrorRequestHandler, json, urlencoded} from 'express'
 import * as compression from 'compression'
 
-import api from "./api/index";
-import poll from "./poll/index";
-
-if (process.env.NODE_ENV !== 'production') loadEnv(); // Load environment variables if necessary
+import api from "./api";
+import poll from "./poll";
+import external from "./external";
 
 const port = process.env.PORT || 8080; // Heroku sets a PORT env variable
 
@@ -15,7 +17,7 @@ const app = express();
 
 app.set('json spaces', 2);
 
-app.use(cors()); // cors
+app.use(cors());
 app.use(compression()); // gzip compression
 app.use(json());
 app.use(urlencoded({extended: true}));
@@ -23,8 +25,9 @@ app.use(urlencoded({extended: true}));
 app.options('*', cors());
 app.use('/api', api);
 app.use('/poll', poll);
+app.use('/external', external);
 
-app.use(((err, req, res, next) => {
+app.use(<ErrorRequestHandler>((err, req, res, next) => {
 
   let error = {
     name: err.name || 'Error',
@@ -34,6 +37,6 @@ app.use(((err, req, res, next) => {
 
   return res.status(err.status || 500).send(error);
 
-}) as ErrorRequestHandler);
+}));
 
 app.listen(port);

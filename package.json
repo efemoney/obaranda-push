@@ -1,0 +1,7 @@
+{
+  "name": "obaranda-push",
+  "version": "1.0.0",
+  "scripts": {
+    "postinstall": "npm install --prefix app"
+  }
+}

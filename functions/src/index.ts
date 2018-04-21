@@ -3,17 +3,21 @@ import {firestore} from 'firebase-functions';
 
 admin.initializeApp();
 
-export const countComics = firestore.document('comics/{page}').onWrite((delta, context) => {
+export const countComics = firestore.document('comics/{page}').onWrite(async (delta, context) => {
 
-  const comicsMeta = admin.firestore().collection('internal').doc('comics-meta');
+  const internal = admin.firestore().collection('internal');
 
-  if (delta.before.exists && delta.after.exists) return Promise.resolve(); // Update, do nothing
+  if (delta.before.exists && delta.after.exists) return; // Updating item in place, exit early
 
-  if (!delta.before.exists) return comicsMeta.get() // Create
-    .then(snapshot => comicsMeta.set({'total-count': (snapshot.get('total-count') || 0) + 1}));
+  const count: number = (await internal.doc('comics-meta').get()).get('total-count') || 0;
 
-  if (!delta.after.exists) return comicsMeta.get() // Delete
-    .then(snapshot => comicsMeta.set({'total-count': (snapshot.get('total-count') || 0) - 1}));
+  if (!delta.before.exists) { // Create
+    await internal.doc('comics-meta').set({'total-count': count + 1}, {merge: true});
+    return;
+  }
 
-  return Promise.resolve();
+  if (!delta.after.exists) { // Delete
+    await internal.doc('comics-meta').set({'total-count': count + 1}, {merge: true});
+    return;
+  }
 });

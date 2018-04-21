@@ -24,7 +24,7 @@ export const getAll = <RequestHandler>(async (req, res, next) => {
     if (offset > 0)
       linkHeader.push(new BasicPaginationLink('prev', originalUrl, limit, Math.max(offset - limit, 0)));
 
-    if (offset + comics.length <= totalCount)
+    if (offset + limit <= totalCount)
       linkHeader.push(new BasicPaginationLink('next', originalUrl, limit, offset + comics.length));
 
     res

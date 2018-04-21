@@ -10,8 +10,6 @@ export type Comic = {
 
   title: string,
 
-  permalink: string,
-
   commentsCount: number,
 
   commentsThreadId: string,

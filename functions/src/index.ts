@@ -1,16 +1,5 @@
 import {firestore} from 'firebase-functions';
 import admin = require("firebase-admin");
-import winston = require("winston");
-
-const Logger = winston.Logger;
-const Console = winston.transports.Console;
-
-const {LoggingWinston} = require('@google-cloud/logging-winston');
-
-const logger = new Logger({
-  level: 'info',
-  transports: [new Console(), new LoggingWinston()],
-});
 
 admin.initializeApp();
 

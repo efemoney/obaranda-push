@@ -6,8 +6,8 @@ import {Palette} from "node-vibrant/lib/color";
 import {Comic, ComicImages, comics as comicModel, settings as settingsModel} from "../models";
 import * as moment from "moment";
 import {unescape} from "he";
-
 import oboe = require("oboe");
+import winston = require("winston");
 import Vibrant = require("node-vibrant");
 
 const Disqus = require("neo-disqus");
@@ -18,9 +18,8 @@ const client = new Disqus({
   api_key: process.env.DISQUS_PUB_KEY,
   api_secret: process.env.DISQUS_SECRET_KEY,
 });
-
-// Depends upon implementation details --- I'M SORRY :'(
-client.options.request_options.useQuerystring = true;
+client.options.request_options.useQuerystring = true; // Depends upon implementation details --- I'M SORRY :'(
+client.options.request_options.timeout = 180_000;
 
 
 interface FeedItem {
@@ -55,8 +54,6 @@ interface ImageMetadata {
 
 type ComicImagesMetadatas = ImageMetadata[];
 
-
-const logError = (error: Error) => console.error(error);
 
 function findMuted(palette: Palette): string | null {
 
@@ -109,6 +106,41 @@ async function computeMetadatas(images: ComicImages): Promise<ComicImagesMetadat
   return imagesMetadatas;
 }
 
+async function findCommentsThread(url: string) { // Why am I doing this to myself???
+
+  const forum = process.env.DISQUS_FORUM as string;
+
+  // first use comic.url as is
+  try {
+    winston.info(`Fetch thread by url`, {url});
+    const opts = {forum, 'thread:link': url};
+    const response: any[] = (await client.get("threads/set", opts)).response;
+    if (response && response.length > 0) {
+      return response[0];
+    }
+  } catch (e) {}
+
+  winston.error(`Could not retrieve thread`);
+
+  // next try to fetch thread with or without a 'www' in the url
+  const www = 'www.';
+  const slashes = '://';
+  const indexOfWWW = url.indexOf(www);
+  const newUrl = indexOfWWW === -1 ? url.replace(slashes, slashes.concat(www)) : url.replace(www, '');
+
+  winston.info(`Computed new url`, {old: url, 'new': newUrl});
+
+  winston.info(`Fetch thread by new url`);
+  const opts1 = {forum, 'thread:link': newUrl};
+  const response1: any[] = (await client.get("threads/set", opts1)).response;
+  if (response1  && response1.length > 0) {
+    return response1[0];
+  }
+
+  winston.error(`No comment thread found`);
+  throw Error();
+}
+
 async function handleUpdatedFeedItems(updatedItems: FeedItem[]) {
   // Updated items can be added/modified or deleted
   // Item is deleted when its images array length is 0 else its added/modified
@@ -118,6 +150,8 @@ async function handleUpdatedFeedItems(updatedItems: FeedItem[]) {
 
   updatedItems.forEach(u => u.images.length > 0 ? addedItems.push(u) : deletedPages.push(u.page));
 
+  winston.info(`Retrieved updated comic items`, {deleted: deletedPages.length, added: addedItems.length});
+
   await handleDeleted(deletedPages);
   await handleAdded(mapItems(addedItems));
 }
@@ -126,15 +160,16 @@ async function handleAdded(comics: Comic[]) {
 
   if (comics.length < 1) return Promise.resolve();
 
-  for (let i = 0; i < comics.length; i++) {
+  winston.info('Handle added');
 
+  for (let i = 0; i < comics.length; i++) {
     let comic = comics[i];
 
-    // Disqus api
-    let forum = process.env.DISQUS_FORUM;
-    let opts = {forum, 'thread:link': comic.url};
-
-    comic.commentsCount = (await client.get("threads/set", opts)).response[0].posts;
+    // Disqus api brouhaha
+    let thread = await findCommentsThread(comic.url);
+    winston.info(`Found thread for comic`, {page: comic.page, threadId: thread.id, threadLink: thread.link});
+    comic.commentsThreadId = thread.id;
+    comic.commentsCount = thread.posts;
 
     let images = comic.images;
     let imagesMetadatas = await computeMetadatas(images);
@@ -148,45 +183,16 @@ async function handleAdded(comics: Comic[]) {
     });
   }
 
-  return await comicModel.putAllComics(comics);
+  return await comicModel.putComics(comics);
 }
 
 async function handleDeleted(deletedPages: number[]) {
 
   if (deletedPages.length < 1) return Promise.resolve();
 
+  winston.info('Handle deleted');
+
   return await comicModel.deleteComicsByPage(deletedPages);
-}
-
-async function updateOlderCommentCounts() {
-
-  // Strategy is; get all the latest disqus comments after the last time we checked
-  // Map comments to their respective threads ids and de-dup the list
-  // Get the set of threads by id and update the comments count for all of them
-
-  const forum = process.env.DISQUS_FORUM;
-  const limit = 100; // set maximum limit
-
-  const lastPolledCommentTime = moment(await settingsModel.getLastPolledCommentTime()).format();
-
-  const opts1: any = {forum, limit, start: lastPolledCommentTime};
-  const posts: { thread: string }[] = (await client.get('posts/list', opts1)).response;
-
-  if (posts.length > 0) {
-    const threadIds = Array.from(new Set(posts.map(post => post.thread)));
-
-    const opts2: any = {forum, thread: threadIds};
-    const threads: { link: string, posts: number }[] = (await client.get('threads/set', opts2)).response;
-
-    for (let thread of threads) {
-      const page = await comicModel.getPageByUrl(thread.link);
-      if (page === 0) continue;
-
-      await comicModel.putCommentsCount(page, thread.posts); // update comments count for thread
-    }
-  }
-
-  await settingsModel.setLastPolledCommentTime(moment().valueOf())
 }
 
 async function updateComicItems() {
@@ -194,6 +200,7 @@ async function updateComicItems() {
   const feedUrl = process.env.OBARANDA_FEED_URL as string;
 
   const lastPolledTime = moment(await settingsModel.getLastPolledTime());
+  winston.info(`Comics last polled at ${lastPolledTime.format()}`);
   const updatedItems: FeedItem[] = [];
 
   oboe(feedUrl)
@@ -213,6 +220,48 @@ async function updateComicItems() {
       await settingsModel.setLastPolledTime(moment().valueOf());
     })
   ;
+}
+
+async function updateOlderCommentCounts() {
+
+  // Strategy is; get all the latest disqus comments after the last time we checked
+  // Map comments to their respective threads ids and de-dup the list
+  // Get the set of threads by id and update the comments count for all of them
+
+  const forum = process.env.DISQUS_FORUM as string;
+  const limit = 100; // set maximum limit
+
+  const lastPolledCommentTime = moment(await settingsModel.getLastPolledCommentTime()).format();
+  winston.info(`Comments last polled at ${lastPolledCommentTime}`);
+
+  const opts1: any = {forum, limit, start: lastPolledCommentTime};
+  winston.info(`Checking for new disqus comments`, {params: opts1});
+  const posts: any[] = (await client.get('posts/list', opts1)).response;
+  winston.info(`Retrieved ${posts ? posts.length : 'undefined'} new disqus comments`);
+
+  if (posts && posts.length > 0) {
+    const threadIds = Array.from(new Set(posts.map(post => post.thread)));
+    winston.info(`Mapped new disqus comments to ${threadIds.length} threads`);
+
+    const opts2: any = {forum, thread: threadIds};
+    winston.info(`Retrieving threads by thread ids`);
+    const threads: any[] = (await client.get('threads/set', opts2)).response;
+    winston.info(`Retrieved ${threads ? threads.length : 'undefined'} threads with new comments`);
+
+    for (let thread of threads) {
+      winston.info(`Try update comments for thread`, {id: thread.id, posts: thread.posts, url: thread.link});
+
+      const page = await comicModel.getPageByThreadId(thread.id);
+      winston.info(`Get comic page with thread id = ${thread.id}`, {page: page === 0 ? 'Not available' : page});
+      if (page === 0) continue;
+
+      await comicModel.putCommentsCount(page, thread.posts); // update comments count for thread
+      winston.info(`Updated thread comments`);
+    }
+  }
+
+  winston.info(`Updating comments last polled time`);
+  await settingsModel.setLastPolledCommentTime(moment().valueOf())
 }
 
 
@@ -235,10 +284,10 @@ router.post('/', async (req, res, next) => {
 
   res.sendStatus(204).end();
 
-  // update the comment counts for existing comics
+  // update comment counts for existing comics
   await updateOlderCommentCounts();
 
-  // handle updated (added and deleted) comics
+  // handle added and deleted comics
   await updateComicItems();
 
 });

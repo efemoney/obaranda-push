@@ -3,15 +3,6 @@
   "version": "1.0.0",
   "description": "A web api to poll RSS at www obaranda.com and disemminate push messages to connected client Android apps. Resides at http://obaranda-push.herokuapp.com",
   "dependencies": {
-    "@google-cloud/firestore": "^0.13.1",
-    "@types/compression": "^0.0.36",
-    "@types/cors": "^2.8.3",
-    "@types/dotenv": "^4.0.3",
-    "@types/express": "^4.11.1",
-    "@types/he": "^0.5.29",
-    "@types/oboe": "^2.0.28",
-    "@types/query-string": "^5.1.0",
-    "@types/request": "^2.47.0",
     "compression": "^1.7.2",
     "cors": "^2.8.4",
     "dotenv": "^5.0.1",
@@ -25,12 +16,22 @@
     "probe-image-size": "^4.0.0",
     "query-string": "^6.0.0",
     "request": "^2.85.0",
-    "typescript": "^2.8.1",
-    "qs": "^6.5.1"
+    "winston": "^2.4.2",
+    "typescript": "^2.8.3",
+    "@google-cloud/firestore": "^0.13.1",
+    "@types/compression": "^0.0.36",
+    "@types/cors": "^2.8.3",
+    "@types/dotenv": "^4.0.3",
+    "@types/express": "^4.11.1",
+    "@types/he": "^0.5.29",
+    "@types/oboe": "^2.0.28",
+    "@types/query-string": "^5.1.0",
+    "@types/request": "^2.47.0",
+    "@types/winston": "^2.3.9"
   },
   "engines": {
-    "node": "9.6.1",
-    "npm": "5.7.1"
+    "node": "9.8.0",
+    "npm": "5.8.0"
   },
   "main": "./lib/server.js",
   "scripts": {
@@ -40,8 +41,5 @@
   },
   "author": "Efeturi Money",
   "license": "MIT",
-  "private": true,
-  "devDependencies": {
-    "@types/qs": "^6.5.1"
-  }
+  "private": true
 }

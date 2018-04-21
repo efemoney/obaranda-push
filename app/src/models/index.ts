@@ -49,11 +49,13 @@ export const comics: {
 
   putComic: (comic: Comic) => Promise<any>;
 
-  putAllComics: (comics: Comic[]) => Promise<WriteResult[]>;
+  putComics: (comics: Comic[]) => Promise<WriteResult[]>;
 
-  getAllComics: (limit: number, offset: number) => Promise<Comic[]>;
+  getComics: (limit: number, offset: number) => Promise<Comic[]>;
 
   getComicByPage: (page: number) => Promise<Comic>;
+
+  getPageByThreadId: (threadId: string) => Promise<number>;
 
   getComicByLatest: () => Promise<Comic>;
 
@@ -61,54 +63,50 @@ export const comics: {
 
   deleteComicsByPage: (pages: number[]) => Promise<WriteResult[]>;
 
-  getPageByUrl: (url: string) => Promise<number>;
-
-  putPageToUrl: (page: number, url: string) => Promise<WriteResult>;
-
-  deleteUrlByPage: (page: number) => Promise<WriteResult>;
-
 } = {
 
-  putAllComics: async comicsArray => {
+  putCommentsCount: (page, commentsCount) => firestore.collection('comics')
+    .doc(`${page}`)
+    .set({commentsCount}, {merge: true})
+  ,
 
-    return await Promise.all(comicsArray.map(comic => comics.putComic(comic)));
-  },
+  putComics: comicsArray => Promise.all(comicsArray.map(comic => comics.putComic(comic))),
 
-  putComic: async comic => {
+  putComic: comic => firestore.collection('comics')
+    .doc(`${comic.page}`)
+    .set(comic)
+  ,
 
-    const wr = await firestore.collection('comics').doc(`${comic.page}`).set(comic);
-
-    await comics.putPageToUrl(comic.page, comic.url);
-
-    return wr;
-  },
-
-  deleteComicsByPage: async pages => {
-
-    const deleteComicAndThenUrl = async (page: number) => {
-
-      const wr = await comics.deleteComicByPage(page);
-
-      await comics.deleteUrlByPage(page);
-
-      return wr;
-    };
-
-    return await Promise.all(pages.map(page => deleteComicAndThenUrl(page)));
-  },
+  deleteComicsByPage: pages => Promise.all(pages.map(page => comics.deleteComicByPage(page))),
 
   deleteComicByPage: page => firestore.collection('comics')
     .doc(`${page}`)
     .delete()
   ,
 
-  getAllComics: (limit, offset) => firestore.collection('comics')
+  getPageByThreadId: threadId => firestore.collection('comics')
+    .where('commentsThreadId', '==', threadId)
+    .get()
+    .then(snapshot => snapshot.empty ? 0 : parseInt(snapshot.docs[0].id))
+  ,
+
+  getComics: (limit, offset) => firestore.collection('comics')
     .orderBy('page', 'desc')
     .limit(limit)
     .offset(offset)
     .get()
     .then(snapshot => snapshot.docs)
     .then(docs => docs.map(it => it.data() as Comic))
+  ,
+
+  getComicByPage: page => firestore.collection('comics')
+    .where('page', '==', page)
+    .get()
+    .then(snapshot => snapshot.docs)
+    .then(docs => {
+      if (docs.length === 1) return docs[0].data() as Comic;
+      throw new ComicNotFoundError(`page ${page}`)
+    })
   ,
 
   getComicByLatest: () => firestore.collection('comics')
@@ -122,51 +120,21 @@ export const comics: {
     })
   ,
 
-  getComicByPage: page => firestore.collection('comics')
-    .where('page', '==', page)
-    .get()
-    .then(snapshot => snapshot.docs)
-    .then(docs => {
-      if (docs.length === 1) return docs[0].data() as Comic;
-      throw new ComicNotFoundError(`page ${page}`)
-    })
-  ,
-
   getTotalCount: () => firestore.collection('internal')
     .doc('comics-meta')
     .get()
     .then(doc => doc.exists ? (doc.get('total-count') || 0) : 0)
   ,
 
-  putPageToUrl: async (page, url) => await firestore.collection('page-to-url')
-    .doc(`${page}`)
-    .set({url}, {merge: true})
-  ,
-
-  getPageByUrl: url => firestore.collection('page-to-url')
-    .where('url', '==', url)
-    .get()
-    .then(snapshot => snapshot.empty ? 0 : parseInt(snapshot.docs[0].id))
-  ,
-
-  deleteUrlByPage: page => firestore.collection('page-to-url')
-    .doc(`${page}`)
-    .delete()
-  ,
-
-  putCommentsCount: async (page, commentsCount) => {
-
-    return await firestore.collection('comics').doc(`${page}`).set({commentsCount}, {merge: true})
-  },
 };
 
 export const settings: {
 
   getLastPolledTime: () => Promise<number>;
 
-  getLastPolledCommentTime: () => Promise<number>;
-
   setLastPolledTime: (time: number) => Promise<any>
+
+  getLastPolledCommentTime: () => Promise<number>;
 
   setLastPolledCommentTime: (time: number) => Promise<any>
 
@@ -175,18 +143,18 @@ export const settings: {
   getLastPolledTime: () => firestore.collection('internal')
     .doc('settings')
     .get()
-    .then(doc => doc.exists ? (doc.get('last-poll') || 0) : 0)
-  ,
-
-  getLastPolledCommentTime: () => firestore.collection('internal')
-    .doc('settings')
-    .get()
-    .then(doc => doc.exists ? (doc.get('last-comment-poll') || 0) : 0)
+    .then(doc => doc.get('last-poll') || 0)
   ,
 
   setLastPolledTime: (time) => firestore.collection('internal')
     .doc('settings')
     .set({'last-poll': time}, {merge: true})
+  ,
+
+  getLastPolledCommentTime: () => firestore.collection('internal')
+    .doc('settings')
+    .get()
+    .then(doc => doc.get('last-comment-poll') || 0)
   ,
 
   setLastPolledCommentTime: (time) => firestore.collection('internal')

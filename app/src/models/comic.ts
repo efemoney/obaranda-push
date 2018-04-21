@@ -12,6 +12,10 @@ export type Comic = {
 
   permalink: string,
 
+  commentsCount: number,
+
+  commentsThreadId: string,
+
   pubDate: string,
 
   images: ComicImages,
@@ -19,6 +23,4 @@ export type Comic = {
   post: Post
 
   author: Author,
-
-  commentsCount: number,
 }

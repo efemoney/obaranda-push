@@ -12,7 +12,7 @@ export const getAll = <RequestHandler>(async (req, res, next) => {
   try {
 
     // retrieve comics
-    const comics = await comicsModel.getAllComics(limit, offset);
+    const comics = await comicsModel.getComics(limit, offset);
     const totalCount = await comicsModel.getTotalCount();
 
     // On heroku, req.protocol is always 'http', original user req protocol is in 'X-Forward-Proto'

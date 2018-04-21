@@ -10,11 +10,14 @@ export const getAll = <RequestHandler>(async (req, res, next) => {
   offset = parseInt(offset);
 
   try {
-    const comics = await comicsModel.getAll(limit, offset);
-    const totalCount = await comicsModel.getCount();
 
-    // From heroku, req.protocol is always 'http', original user req protocol is in 'X-Forward-Proto'
-    const originalUrl = req.get('X-Forwarded-Proto') + '://' + req.hostname + req.originalUrl;
+    // retrieve comics
+    const comics = await comicsModel.getComics(limit, offset);
+    const totalCount = await comicsModel.getTotalCount();
+
+    // On heroku, req.protocol is always 'http', original user req protocol is in 'X-Forward-Proto'
+    const protocol = req.get('X-Forwarded-Proto') || req.protocol;
+    const originalUrl = protocol + '://' + req.hostname + req.originalUrl;
 
     const linkHeader = new LinkHeader();
 
@@ -37,20 +40,33 @@ export const getAll = <RequestHandler>(async (req, res, next) => {
 
 });
 
-export const getPage = <RequestHandler>((req, res, next) => {
+export const getPage = <RequestHandler>(async (req, res, next) => {
 
   const page = parseInt(req.params.page);
 
-  comicsModel.getByPage(page)
+  try {
+    const comic = comicsModel.getComicByPage(page)
+
+  } catch (e) {
+    next(e)
+  }
+
+  comicsModel.getComicByPage(page)
     .then(comic => res.status(200).json(comic))
     .catch(err => next(err))
   ;
 
 });
 
-export const getLatest = <RequestHandler>((req, res, next) => {
+export const getLatest = <RequestHandler>(async (req, res, next) => {
 
-  comicsModel.getByLatest()
+  try {
+    const comic = comicsModel.getComicByLatest()
+  } catch (e) {
+    next(e);
+  }
+
+  comicsModel.getComicByLatest()
     .then(comic => res.status(200).json(comic))
     .catch(err => next(err))
   ;

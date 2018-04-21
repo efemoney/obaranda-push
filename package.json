@@ -1,10 +1,11 @@
 {
   "name": "obaranda-push",
   "version": "1.0.0",
+  "engines": {
+    "node": "9.8.0",
+    "npm": "5.8.0"
+  },
   "scripts": {
     "postinstall": "npm install --prefix app"
-  },
-  "dependencies": {
-    "npm": "^5.8.0"
   }
 }

@@ -47,7 +47,7 @@ export const comics: {
 
   putCommentsCount: (page: number, count: number) => Promise<WriteResult>;
 
-  putComic: (comic: Comic) => Promise<any>;
+  putComic: (comic: Comic) => Promise<WriteResult>;
 
   putComics: (comics: Comic[]) => Promise<WriteResult[]>;
 

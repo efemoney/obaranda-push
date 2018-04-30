@@ -4,7 +4,7 @@ import {Router} from "express";
 import {AuthenticationError} from "../errors";
 import {Palette} from "node-vibrant/lib/color";
 import {Comic, ComicImages, comics as comicModel, settings as settingsModel} from "../models";
-import * as moment from "moment";
+import * as moment from "moment-timezone";
 import {unescape} from "he";
 import oboe = require("oboe");
 import Vibrant = require("node-vibrant");
@@ -70,7 +70,7 @@ function mapItems(items: FeedItem[]): Comic[] {
     page: item.page,
     url: item.url,
     title: unescape(item.title),
-    pubDate: item.date_published,
+    pubDate: moment(item.date_published).tz("Africa/Lagos").format(),
     images: item.images,
     post: {
       title: !item.post.title ? null : unescape(item.post.title),
@@ -123,7 +123,7 @@ async function findCommentsThread(url: string) { // Why am I doing this to mysel
 
   const opts1 = {forum, 'thread:link': newUrl};
   const response1: any[] = (await client.get("threads/set", opts1)).response;
-  if (response1  && response1.length > 0) {
+  if (response1 && response1.length > 0) {
     return response1[0];
   }
 

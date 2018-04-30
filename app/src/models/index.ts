@@ -134,9 +134,9 @@ export const settings: {
 
   setLastPolledTime: (time: number) => Promise<any>
 
-  getLastPolledCommentTime: () => Promise<number>;
+  getLastPolledCommentTime: () => Promise<string>;
 
-  setLastPolledCommentTime: (time: number) => Promise<any>
+  setLastPolledCommentTime: (time: string) => Promise<any>
 
 } = {
 
@@ -154,7 +154,7 @@ export const settings: {
   getLastPolledCommentTime: () => firestore.collection('internal')
     .doc('settings')
     .get()
-    .then(doc => doc.get('last-comment-poll') || 0)
+    .then(doc => doc.get('last-comment-poll'))
   ,
 
   setLastPolledCommentTime: (time) => firestore.collection('internal')

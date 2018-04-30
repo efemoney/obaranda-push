@@ -12,6 +12,8 @@ import Vibrant = require("node-vibrant");
 const Disqus = require("neo-disqus");
 const probe = require("probe-image-size");
 
+moment.tz.setDefault("Africa/Lagos");
+
 const client = new Disqus({
   access_token: process.env.DISQUS_ACCESS_TOKEN,
   api_key: process.env.DISQUS_PUB_KEY,
@@ -70,7 +72,7 @@ function mapItems(items: FeedItem[]): Comic[] {
     page: item.page,
     url: item.url,
     title: unescape(item.title),
-    pubDate: moment(item.date_published).tz("Africa/Lagos").format(),
+    pubDate: moment(item.date_published).format(),
     images: item.images,
     post: {
       title: !item.post.title ? null : unescape(item.post.title),
@@ -212,7 +214,7 @@ async function updateOlderCommentCounts() {
   const forum = process.env.DISQUS_FORUM as string;
   const limit = 100; // set maximum limit
 
-  const lastPolledCommentTime = moment(await settingsModel.getLastPolledCommentTime()).format();
+  const lastPolledCommentTime = (await settingsModel.getLastPolledCommentTime() || moment.unix(0).format());
 
   const opts1: any = {forum, limit, start: lastPolledCommentTime};
   const posts: any[] = (await client.get('posts/list', opts1)).response;
@@ -232,7 +234,7 @@ async function updateOlderCommentCounts() {
     }
   }
 
-  await settingsModel.setLastPolledCommentTime(moment().valueOf())
+  await settingsModel.setLastPolledCommentTime(moment().format())
 }
 
 

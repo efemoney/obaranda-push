@@ -56,12 +56,18 @@ type ComicImagesMetadatas = ImageMetadata[];
 
 function findMuted(palette: Palette): string | null {
 
-  return palette.Muted ? palette.Muted.getHex() : palette.DarkMuted ? palette.DarkMuted.getHex() : null;
+  return palette.Muted ? palette.Muted.getHex()
+    : palette.LightMuted ? palette.LightMuted.getHex()
+      : palette.DarkMuted ? palette.DarkMuted.getHex()
+        : null;
 }
 
 function findVibrant(palette: Palette): string | null {
 
-  return palette.Vibrant ? palette.Vibrant.getHex() : palette.DarkVibrant ? palette.DarkVibrant.getHex() : null;
+  return palette.Vibrant ? palette.Vibrant.getHex()
+    : palette.LightVibrant ? palette.LightVibrant.getHex()
+      : palette.DarkVibrant ? palette.DarkVibrant.getHex()
+        : null;
 }
 
 function mapItems(items: FeedItem[]): Comic[] {
@@ -115,7 +121,8 @@ async function findCommentsThread(url: string) { // Why am I doing this to mysel
     if (response && response.length > 0) {
       return response[0];
     }
-  } catch (e) {}
+  } catch (e) {
+  }
 
   // next try to fetch thread with or without a 'www' in the url
   const www = 'www.';

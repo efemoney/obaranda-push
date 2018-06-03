@@ -15,7 +15,7 @@ const port = process.env.PORT || 8080; // Heroku sets a PORT env variable
 
 const app = express();
 
-app.set('json spaces', 2);
+if (process.env.NODE_ENV !== 'production') app.set('json spaces', 2);
 
 app.use(cors());
 app.use(compression()); // gzip compression

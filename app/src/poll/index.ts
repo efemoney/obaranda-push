@@ -37,7 +37,7 @@ interface FeedItem {
 
   images: { url: string, alt?: string }[],
 
-  post: { title?: string, body?: string }
+  post: { title?: string, body?: string, transcript?: string }
 }
 
 interface ImageMetadata {
@@ -82,7 +82,8 @@ function mapItems(items: FeedItem[]): Comic[] {
     images: item.images,
     post: {
       title: !item.post.title ? null : unescape(item.post.title),
-      body: !item.post.body ? null : unescape(item.post.body)
+      body: !item.post.body ? null : unescape(item.post.body),
+      transcript: !item.post.transcript ? null : unescape(item.post.transcript)
     },
     author: item.author
   }) as Comic);

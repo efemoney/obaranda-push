@@ -20,7 +20,7 @@ const client = new Disqus({
   api_secret: process.env.DISQUS_SECRET_KEY,
 });
 client.options.request_options.useQuerystring = true; // Depends upon implementation details --- I'M SORRY :'(
-client.options.request_options.timeout = 180_000;
+client.options.request_options.timeout = 180000;
 
 
 interface FeedItem {
@@ -98,7 +98,7 @@ async function computeMetadatas(images: ComicImages): Promise<ComicImagesMetadat
     let image = images[i];
 
     const palette = await Vibrant.from(image.url).getPalette();
-    const {width, height} = await probe(image.url, {timeout: 180_000});
+    const {width, height} = await probe(image.url, {timeout: 180000});
 
     imagesMetadatas.push({
       width,
